@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CiChat - Chat Room</title>
+    <style>
+        /* Warna tema Lilac */
+        :root {
+            --primary-color: #c8a2c8; /* Lilac */
+            --secondary-color: #6b4c6b; /* Dark Lilac */
+            --background-color: #f9f6fc; /* Soft Lilac Background */
+            --text-color: #4a4a4a; /* Text Color */
+            --button-color: #a76ca7; /* Button Lilac */
+            --button-hover: #905090; /* Button Darker Hover */
+            --message-you: #b3d9ff; /* Blue for your messages */
+            --message-other: #ffffff; /* White for other messages */
+        }
+
+        /* Global styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: var(--text-color);
+        }
+
+        #chat-container {
+            width: 90%;
+            max-width: 400px;
+            background: var(--primary-color);
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 90%; /* Responsive for smaller screens */
+        }
+
+        #login, #chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow: auto;
+        }
+
+        #login input, #chat input {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid var(--secondary-color);
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        #login button, #chat button {
+            background-color: var(--button-color);
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+            max-width: 150px;
+            margin-top: 10px;
+        }
+
+        #login button:hover, #chat button:hover {
+            background-color: var(--button-hover);
+        }
+
+        h2 {
+            color: var(--secondary-color);
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        #messages {
+            border: 1px solid var(--secondary-color);
+            border-radius: 5px;
+            padding: 10px;
+            flex: 1;
+            overflow-y: auto;
+            background-color: var(--background-color);
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .message.you {
+            background-color: var(--message-you);
+            align-self: flex-end; /* Posisi di sebelah kanan */
+            color: var(--text-color);
+        }
+
+        .message.other {
+            background-color: var(--message-other);
+            align-self: flex-start; /* Posisi di sebelah kiri */
+            color: var(--text-color);
+        }
+
+        /* Responsiveness */
+        @media (max-width: 600px) {
+            #chat-container {
+                height: 100%; /* Adjust height for smaller screens */
+            }
+
+            h2 {
+                font-size: 18px;
+            }
+
+            #login input, #chat input {
+                font-size: 12px;
+            }
+
+            #login button, #chat button {
+                font-size: 12px;
+                padding: 8px;
+            }
+
+            .message {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <!-- Login Screen -->
+        <div id="login">
+            <h2>Masuk ke CiChat</h2>
+            <input type="text" id="usernameInput" placeholder="Masukkan nama Anda">
+            <button onclick="connect()">Gabung</button>
+        </div>
+
+        <!-- Chat Screen -->
+        <div id="chat" style="display: none;">
+            <h2>Selamat Datang, <span id="username"></span>!</h2>
+            <div id="messages"></div>
+            <input type="text" id="messageInput" placeholder="Ketik pesan...">
+            <button onclick="sendMessage()">Kirim</button>
+            <button onclick="exitChat()" style="margin-top: 10px; background-color: red;">Exit</button>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+        let username;
+
+        // Fungsi untuk terhubung ke server
+        function connect() {
+            username = document.getElementById("usernameInput").value;
+            if (!username) {
+                alert("Harap masukkan nama Anda!");
+                return;
+            }
+
+            ws = new WebSocket('ws://localhost:6789');
+
+            ws.onopen = () => {
+                console.log('Connected to server');
+                ws.send(username); // Kirim username ke server
+                document.getElementById("login").style.display = "none";
+                document.getElementById("chat").style.display = "flex";
+                document.getElementById("username").textContent = username;
+            };
+
+            ws.onmessage = (event) => {
+                const data = event.data;
+
+                // Cek apakah pesan mengandung ":"
+                if (data.includes(":")) {
+                    const [sender, ...messageParts] = data.split(":");
+                    const message = messageParts.join(":").trim();
+
+                    // Tampilkan pesan dengan warna yang sesuai
+                    const isYou = sender === username;
+                    appendMessage(isYou ? `You: ${message}` : `${sender}: ${message}`, isYou);
+                } else {
+                    // Jika pesan adalah notifikasi (tanpa ":"), tampilkan langsung
+                    appendMessage(data, false);
+                }
+            };
+
+            ws.onclose = () => {
+                alert('Koneksi terputus dengan server.');
+                document.getElementById("login").style.display = "flex";
+                document.getElementById("chat").style.display = "none";
+            };
+        }
+
+        function appendMessage(message, isYou) {
+            const messagesDiv = document.getElementById("messages");
+            const messageElement = document.createElement("div");
+            messageElement.textContent = message;
+            messageElement.className = isYou ? 'message you' : 'message other';
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function sendMessage() {
+            const messageInput = document.getElementById("messageInput");
+            const message = messageInput.value;
+            if (message) {
+                appendMessage(`You: ${message}`, true); // Tampilkan pesan lokal
+                ws.send(message); // Kirim pesan ke server
+                messageInput.value = ''; // Kosongkan input pesan
+            }
+        }
+
+        function exitChat() {
+            if (ws) {
+                ws.close(); // Tutup koneksi
+            }
+            alert("Anda telah keluar dari CiChat.");
+            document.getElementById("login").style.display = "flex";
+            document.getElementById("chat").style.display = "none";
+        }
+    </script>
+</body>
+</html>
+
