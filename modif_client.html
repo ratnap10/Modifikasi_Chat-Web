@@ -3,7 +3,7 @@
 <head>
     <title>CiChat - Chat Room</title>
     <style>
-        /* Warna tema Lilac */
+        /*tema Lilac */
         :root {
             --primary-color: #c8a2c8; /* Lilac */
             --secondary-color: #6b4c6b; /* Dark Lilac */
@@ -37,7 +37,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            height: 90%; /* Responsive for smaller screens */
+            height: 90%; /* responsif */
         }
 
         #login, #chat {
@@ -115,10 +115,10 @@
             color: var(--text-color);
         }
 
-        /* Responsiveness */
+        /* responsif */
         @media (max-width: 600px) {
             #chat-container {
-                height: 100%; /* Adjust height for smaller screens */
+                height: 100%;
             }
 
             h2 {
@@ -183,17 +183,15 @@
 
             ws.onmessage = (event) => {
                 const data = event.data;
-
-                // Cek apakah pesan mengandung ":"
+                
                 if (data.includes(":")) {
                     const [sender, ...messageParts] = data.split(":");
                     const message = messageParts.join(":").trim();
 
-                    // Tampilkan pesan dengan warna yang sesuai
+                    // warna
                     const isYou = sender === username;
                     appendMessage(isYou ? `You: ${message}` : `${sender}: ${message}`, isYou);
                 } else {
-                    // Jika pesan adalah notifikasi (tanpa ":"), tampilkan langsung
                     appendMessage(data, false);
                 }
             };
